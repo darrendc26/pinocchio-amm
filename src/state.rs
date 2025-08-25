@@ -1,26 +1,31 @@
-use pinocchio::{program_error::ProgramError, pubkey::Pubkey};
 use core::mem::size_of;
+use pinocchio::{account_info::AccountInfo, program_error::ProgramError, pubkey::Pubkey};
  
 #[repr(C)]
-pub struct Escrow {
-    pub seed: u64,        // Random seed for PDA derivation
-    pub maker: Pubkey,    // Creator of the escrow
-    pub mint_a: Pubkey,   // Token being deposited
-    pub mint_b: Pubkey,   // Token being requested
-    pub receive: u64,     // Amount of token B wanted
-    pub bump: [u8;1]      // PDA bump seed
+pub struct Config {
+    state: u8,
+    seed: [u8; 8],
+    authority: Pubkey,
+    mint_x: Pubkey,
+    mint_y: Pubkey,
+    fee: [u8; 2],
+    config_bump: [u8; 1],
 }
-
-impl Escrow {
-    pub const LEN: usize = size_of::<u64>() + 
-        size_of::<Pubkey>() + 
-        size_of::<Pubkey>() + 
-        size_of::<u64>() + 
-        size_of::<[u8;1]>();
-
+ 
+#[repr(u8)]
+pub enum AmmState {
+    Uninitialized = 0u8,
+    Initialized = 1u8,
+    Disabled = 2u8,
+    WithdrawOnly = 3u8,
+}
+ 
+impl Config {
+    pub const LEN: usize = size_of::<Config>();
+ 
     #[inline(always)]
     pub fn load_mut(bytes: &mut [u8]) -> Result<&mut Self, ProgramError> {
-        if bytes.len() != Escrow::LEN {
+        if bytes.len() != Config::LEN {
             return Err(ProgramError::InvalidAccountData);
         }
         Ok(unsafe { &mut *core::mem::transmute::<*mut u8, *mut Self>(bytes.as_mut_ptr()) })
@@ -28,43 +33,37 @@ impl Escrow {
 
     #[inline(always)]
     pub fn load(bytes: &[u8]) -> Result<&Self, ProgramError> {
-         if bytes.len() != Escrow::LEN {
+         if bytes.len() != Config::LEN {
             return Err(ProgramError::InvalidAccountData);
         }
         Ok(unsafe { & *core::mem::transmute::<*const u8, *const Self>(bytes.as_ptr()) })
     }
 
-    pub fn set_seed(&mut self, seed: u64) {
+    pub fn set_state(&mut self, state: AmmState) {
+        self.state = state as u8;
+    }
+
+    pub fn set_seed(&mut self, seed: [u8; 8]) {
         self.seed = seed;
     }
-
-    pub fn set_maker(&mut self, maker: Pubkey) {
-        self.maker = maker;
+ 
+    pub fn set_authority(&mut self, authority: Pubkey) {
+        self.authority = authority;
     }
-
-    pub fn set_mint_a(&mut self, mint_a: Pubkey) {
-        self.mint_a = mint_a;
+ 
+    pub fn set_mint_x(&mut self, mint_x: Pubkey) {
+        self.mint_x = mint_x;
     }
-
-    pub fn set_mint_b(&mut self, mint_b: Pubkey) {
-        self.mint_b = mint_b;
+ 
+    pub fn set_mint_y(&mut self, mint_y: Pubkey) {
+        self.mint_y = mint_y;
     }
-
-    pub fn set_receive(&mut self, receive: u64) {
-        self.receive = receive;
+ 
+    pub fn set_fee(&mut self, fee: [u8; 2]) {
+        self.fee = fee;
     }
-
-    pub fn set_bump(&mut self, bump: [u8;1]) {
-        self.bump = bump;
+ 
+    pub fn set_config_bump(&mut self, config_bump: [u8; 1]) {
+        self.config_bump = config_bump;
     }
-
-    pub fn set_inner(&mut self, seed: u64, maker: Pubkey, mint_a: Pubkey, mint_b: Pubkey, receive: u64, bump: [u8;1]) {
-        self.seed = seed;
-        self.maker = maker;
-        self.mint_a = mint_a;
-        self.mint_b = mint_b;
-        self.receive = receive;
-        self.bump = bump;
-    }
-
 }

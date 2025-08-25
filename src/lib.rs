@@ -6,6 +6,7 @@ entrypoint!(process_instruction);
  
 pub mod instructions;
 pub use instructions::*;
+pub mod helpers;
  
 pub mod state;
 pub use state::*;
